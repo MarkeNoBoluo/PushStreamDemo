@@ -22,10 +22,27 @@ VideoCodeThread::~VideoCodeThread()
 
 bool VideoCodeThread::initialize(AVFormatContext *fmtCtx, int width, int height, int fps, int bitrate)
 {
+    // 释放历史资源，避免重复初始化
+    if (m_codecCtx) {
+        avcodec_free_context(&m_codecCtx);
+        m_codecCtx = nullptr;
+    }
+    if (m_swsCtx) {
+        sws_freeContext(m_swsCtx);
+        m_swsCtx = nullptr;
+    }
+    m_stream = nullptr;
     // 初始化编码器
     const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_H264);
-    if (!codec) return false;
+    if (!codec) {
+        emit packetEncoded(nullptr); // or emit error("找不到H264编码器");
+        return false;
+    }
     m_codecCtx = avcodec_alloc_context3(codec);
+    if (!m_codecCtx) {
+        emit packetEncoded(nullptr); // or emit error("无法分配编码器上下文");
+        return false;
+    }
     m_codecCtx->width = width;
     m_codecCtx->height = height;
     m_codecCtx->pix_fmt = AV_PIX_FMT_YUV420P;
@@ -36,18 +53,58 @@ bool VideoCodeThread::initialize(AVFormatContext *fmtCtx, int width, int height,
     m_codecCtx->max_b_frames = 0;
     m_codecCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
-    if (avcodec_open2(m_codecCtx, codec, nullptr) < 0) {
+    // 可选：参考CodeThread，设置码率控制参数
+    m_codecCtx->rc_buffer_size = bitrate * 1.5;
+    m_codecCtx->rc_max_rate = bitrate * 1.5;
+    m_codecCtx->rc_min_rate = bitrate * 0.5;
+
+    AVDictionary* codec_options = nullptr;
+
+    // 基础预设
+    av_dict_set(&codec_options, "preset", "superfast", 0);
+    av_dict_set(&codec_options, "tune", "zerolatency", 0);
+    // 固定比特率模式 (CBR)
+    av_dict_set(&codec_options, "nal-hrd", "cbr", 0);    // CBR模式
+    av_dict_set(&codec_options, "x264-params",
+                QString("nal-hrd=cbr:force-cfr=1:vbv-maxrate=%1:vbv-bufsize=%2")
+                    .arg(m_maxBitrate/1000)  // 转换为 kbps
+                    .arg(m_minBitrate/1000)
+                    .toStdString().c_str(), 0);
+
+    if (avcodec_open2(m_codecCtx, codec, &codec_options) < 0) {
         avcodec_free_context(&m_codecCtx);
+        m_codecCtx = nullptr;
+        emit packetEncoded(nullptr); // or emit error("打开编码器失败");
         return false;
     }
 
     m_stream = avformat_new_stream(fmtCtx, codec);
-    if (!m_stream) return false;
+    if (!m_stream) {
+        avcodec_free_context(&m_codecCtx);
+        m_codecCtx = nullptr;
+        emit packetEncoded(nullptr); // or emit error("新建输出流失败");
+        return false;
+    }
     m_stream->time_base = m_codecCtx->time_base;
-    avcodec_parameters_from_context(m_stream->codecpar, m_codecCtx);
 
-    m_swsCtx = sws_getContext(width, height, AV_PIX_FMT_BGR0, // 假设采集到的是BGR0
-                              width, height, AV_PIX_FMT_YUV420P, SWS_BICUBIC, nullptr, nullptr, nullptr);
+    if (avcodec_parameters_from_context(m_stream->codecpar, m_codecCtx) < 0) {
+        avcodec_free_context(&m_codecCtx);
+        m_codecCtx = nullptr;
+        m_stream = nullptr;
+        emit packetEncoded(nullptr); // or emit error("参数拷贝失败");
+        return false;
+    }
+
+    m_swsCtx = sws_getContext(width, height, m_codecCtx->pix_fmt,
+                              width, height, AV_PIX_FMT_YUV420P,
+                              SWS_BICUBIC, nullptr, nullptr, nullptr);
+    if (!m_swsCtx) {
+        avcodec_free_context(&m_codecCtx);
+        m_codecCtx = nullptr;
+        m_stream = nullptr;
+        emit packetEncoded(nullptr); // or emit error("SWS上下文创建失败");
+        return false;
+    }
 
     m_running = true;
     return true;
@@ -93,14 +150,12 @@ void VideoCodeThread::run()
 
         // 编码
         if (avcodec_send_frame(m_codecCtx, yuvFrame) == 0) {
-            AVPacket pkt;
-            av_init_packet(&pkt);
-            pkt.data = nullptr;
-            pkt.size = 0;
-            while (avcodec_receive_packet(m_codecCtx, &pkt) == 0) {
-                pkt.stream_index = m_stream->index;
-                emit packetEncoded(&pkt);
-                av_packet_unref(&pkt);
+            AVPacket* pkt = av_packet_alloc();
+            av_init_packet(pkt);
+            while (avcodec_receive_packet(m_codecCtx, pkt) == 0) {
+                pkt->stream_index = m_stream->index;
+                emit packetEncoded(pkt);
+                pkt = av_packet_alloc(); // 下一个
             }
         }
         av_frame_free(&yuvFrame);

@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <memory>
+#include <QThread>
 #include "DataStruct.h"
 class RTSPPusher;
 class RTSPSyncPush;
@@ -29,5 +30,6 @@ private:
     std::unique_ptr<RTSPPusher> m_pusher;
     bool m_isPush = false;
     RTSPSyncPush *m_rtspPusher = nullptr;
+    QThread *m_pushThread = nullptr;
 };
 #endif // MAINWINDOW_H

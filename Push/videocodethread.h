@@ -34,6 +34,8 @@ private:
     AVStream* m_stream = nullptr;
     QQueue<AVFrame*> m_frameQueue;
     QMutex m_mutex;
+    int m_maxBitrate = 6000000;      // 最大比特率 (bps)
+    int m_minBitrate = 2000000;      // 最小比特率 (bps)
     volatile bool m_running = false;
 };
 

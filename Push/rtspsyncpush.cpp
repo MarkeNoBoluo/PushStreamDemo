@@ -10,7 +10,8 @@
 RTSPSyncPush::RTSPSyncPush(QObject* parent)
     : QObject(parent)
 {
-
+    avformat_network_init();//初始化网络
+    avdevice_register_all();//初始化ffmpeg
 }
 
 RTSPSyncPush::~RTSPSyncPush()
@@ -137,9 +138,15 @@ void RTSPSyncPush::onEncodedAudioPacket(AVPacket *pkt)
 void RTSPSyncPush::pushPacket(AVPacket *pkt, bool isVideo)
 {
     // 简单同步控制可以在这里实现（根据 PTS 控制写入先后/丢帧等策略）
+    if (!pkt || !pkt->data || pkt->size <= 0) {
+        av_packet_free(&pkt); // 确保释放
+        return;
+    }
     if (av_interleaved_write_frame(m_fmtCtx, pkt) < 0) {
         emit error("推流包写入失败");
     }
-    av_packet_unref(pkt);
+    QString txt = isVideo?"视频包":"音频包";
+    LogDebug << "写入"<<txt;
+    av_packet_free(&pkt); // 彻底释放，不用 unref
 }
 

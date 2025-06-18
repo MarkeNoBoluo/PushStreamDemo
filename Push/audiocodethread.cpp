@@ -96,15 +96,14 @@ void AudioCodeThread::run() {
 
         // 编码
         if (avcodec_send_frame(m_codecCtx, frame) == 0) {
-            AVPacket pkt;
-            av_init_packet(&pkt);
-            pkt.data = nullptr;
-            pkt.size = 0;
-            while (avcodec_receive_packet(m_codecCtx, &pkt) == 0) {
-                pkt.stream_index = m_stream->index;
-                emit packetEncoded(&pkt);
-                av_packet_unref(&pkt);
+            AVPacket* pkt = av_packet_alloc();
+            av_init_packet(pkt);
+            while (avcodec_receive_packet(m_codecCtx, pkt) == 0) {
+                emit packetEncoded(pkt); // 发送给主线程或推流线程
+                pkt = av_packet_alloc();
+                av_init_packet(pkt);
             }
+            av_packet_free(&pkt);
         }
         emit audioPtsUpdated(frame->pts);
         av_frame_free(&frame);
