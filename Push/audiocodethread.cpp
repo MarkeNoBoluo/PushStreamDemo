@@ -1,4 +1,5 @@
 ﻿#include "audiocodethread.h"
+#include "Logger.h"
 
 AudioCodeThread::AudioCodeThread(QObject* parent)
     : QThread(parent)
@@ -92,6 +93,7 @@ void AudioCodeThread::run() {
         swr_convert(m_swrCtx, frame->data, frame->nb_samples, &src, frame->nb_samples);
 
         frame->pts = m_pts;
+        LogDebug << "编码音频帧PTS:"<<frame->pts;
         m_pts += frame->nb_samples;
 
         // 编码
@@ -108,6 +110,16 @@ void AudioCodeThread::run() {
         emit audioPtsUpdated(frame->pts);
         av_frame_free(&frame);
     }
+}
+
+AVStream *AudioCodeThread::stream() const
+{
+    return m_stream;
+}
+
+AVCodecContext *AudioCodeThread::codecCtx() const
+{
+    return m_codecCtx;
 }
 
 void AudioCodeThread::stopEncoding() {

@@ -35,7 +35,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_pushThread, &QThread::started, m_rtspPusher, &RTSPSyncPush::start);
     connect(m_pushThread, &QThread::finished, m_rtspPusher, &QThread::deleteLater);
     m_rtspPusher->initialize(
-        "desktop",1920,1080,30,6000,
+        "desktop",1920,1080,30,6000000,
         44100,2,"rtsp://192.168.42.116:25544/live"
         );
 }

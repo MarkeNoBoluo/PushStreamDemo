@@ -1,5 +1,5 @@
 ﻿#include "videocodethread.h"
-
+#include "Logger.h"
 
 
 VideoCodeThread::VideoCodeThread(QObject *parent)
@@ -35,12 +35,12 @@ bool VideoCodeThread::initialize(AVFormatContext *fmtCtx, int width, int height,
     // 初始化编码器
     const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_H264);
     if (!codec) {
-        emit packetEncoded(nullptr); // or emit error("找不到H264编码器");
+        LogErr << ("找不到H264编码器");
         return false;
     }
     m_codecCtx = avcodec_alloc_context3(codec);
     if (!m_codecCtx) {
-        emit packetEncoded(nullptr); // or emit error("无法分配编码器上下文");
+        LogErr << ("无法分配编码器上下文");
         return false;
     }
     m_codecCtx->width = width;
@@ -74,7 +74,7 @@ bool VideoCodeThread::initialize(AVFormatContext *fmtCtx, int width, int height,
     if (avcodec_open2(m_codecCtx, codec, &codec_options) < 0) {
         avcodec_free_context(&m_codecCtx);
         m_codecCtx = nullptr;
-        emit packetEncoded(nullptr); // or emit error("打开编码器失败");
+        LogErr << ("打开编码器失败");
         return false;
     }
 
@@ -82,7 +82,7 @@ bool VideoCodeThread::initialize(AVFormatContext *fmtCtx, int width, int height,
     if (!m_stream) {
         avcodec_free_context(&m_codecCtx);
         m_codecCtx = nullptr;
-        emit packetEncoded(nullptr); // or emit error("新建输出流失败");
+        LogErr << ("新建输出流失败");
         return false;
     }
     m_stream->time_base = m_codecCtx->time_base;
@@ -91,18 +91,18 @@ bool VideoCodeThread::initialize(AVFormatContext *fmtCtx, int width, int height,
         avcodec_free_context(&m_codecCtx);
         m_codecCtx = nullptr;
         m_stream = nullptr;
-        emit packetEncoded(nullptr); // or emit error("参数拷贝失败");
+        LogErr << ("参数拷贝失败");
         return false;
     }
 
-    m_swsCtx = sws_getContext(width, height, m_codecCtx->pix_fmt,
+    m_swsCtx = sws_getContext(width, height, AV_PIX_FMT_BGRA,
                               width, height, AV_PIX_FMT_YUV420P,
                               SWS_BICUBIC, nullptr, nullptr, nullptr);
     if (!m_swsCtx) {
         avcodec_free_context(&m_codecCtx);
         m_codecCtx = nullptr;
         m_stream = nullptr;
-        emit packetEncoded(nullptr); // or emit error("SWS上下文创建失败");
+        LogErr << ("SWS上下文创建失败");
         return false;
     }
 
@@ -124,6 +124,7 @@ void VideoCodeThread::stopEncoding()
 
 void VideoCodeThread::run()
 {
+    static int64_t video_frame_pts = 0;
     while (m_running) {
         m_mutex.lock();
         if (m_frameQueue.isEmpty()) {
@@ -133,7 +134,6 @@ void VideoCodeThread::run()
         }
         AVFrame* srcFrame = m_frameQueue.dequeue();
         m_mutex.unlock();
-
         // 转换为YUV420P
         AVFrame* yuvFrame = av_frame_alloc();
         yuvFrame->format = m_codecCtx->pix_fmt;
@@ -146,8 +146,8 @@ void VideoCodeThread::run()
                   0, m_codecCtx->height,
                   yuvFrame->data, yuvFrame->linesize);
 
-        yuvFrame->pts = srcFrame->pts;
-
+        yuvFrame->pts = video_frame_pts++;
+        LogDebug << "编码视频帧PTS:"<<yuvFrame->pts;
         // 编码
         if (avcodec_send_frame(m_codecCtx, yuvFrame) == 0) {
             AVPacket* pkt = av_packet_alloc();
@@ -161,4 +161,14 @@ void VideoCodeThread::run()
         av_frame_free(&yuvFrame);
         av_frame_free(&srcFrame);
     }
+}
+
+AVStream *VideoCodeThread::stream() const
+{
+    return m_stream;
+}
+
+AVCodecContext *VideoCodeThread::codecCtx() const
+{
+    return m_codecCtx;
 }

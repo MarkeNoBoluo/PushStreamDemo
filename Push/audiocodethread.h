@@ -22,6 +22,9 @@ public:
     void addAudioData(const QByteArray& data);
     void stopEncoding();
 
+    AVCodecContext *codecCtx() const;
+    AVStream *stream() const;
+
 signals:
     void packetEncoded(AVPacket* packet);
     void audioPtsUpdated(int64_t pts);

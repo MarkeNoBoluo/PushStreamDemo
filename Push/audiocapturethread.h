@@ -4,6 +4,7 @@
 #include <QThread>
 #include <QAudioInput>
 #include <QIODevice>
+#include <QAudioDeviceInfo> // 新增
 
 class AudioCaptureThread : public QThread
 {

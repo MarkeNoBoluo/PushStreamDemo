@@ -25,6 +25,7 @@ bool AudioCaptureThread::initialize(int sampleRate, int channels) {
         LogInfo << "使用最接近的音频格式:" << m_audioFormat.sampleRate() << "Hz,"
                 << m_audioFormat.channelCount() << "channels";
     }
+    LogDebug << "音频输入设备" <<info.deviceName();
     return true;
 }
 

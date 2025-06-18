@@ -22,6 +22,9 @@ public:
     void addVideoFrame(AVFrame* frame);
     void stopEncoding();
 
+    AVCodecContext *codecCtx() const;
+    AVStream *stream() const;
+
 signals:
     void packetEncoded(AVPacket* packet);
 

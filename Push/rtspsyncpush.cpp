@@ -118,6 +118,12 @@ void RTSPSyncPush::onVideoFrameAvailable(AVFrame *frame)
 void RTSPSyncPush::onEncodedVideoPacket(AVPacket *pkt)
 {
     QMutexLocker locker(&m_mutex);
+    // 时间戳转换：将编码器的time_base转换为流的time_base
+    if (m_videoCodeThread && m_videoCodeThread->codecCtx() && m_videoCodeThread->stream()) {
+        av_packet_rescale_ts(pkt,
+             m_videoCodeThread->codecCtx()->time_base,
+             m_videoCodeThread->stream()->time_base);
+    }
     pushPacket(pkt, true);
 }
 
@@ -132,6 +138,12 @@ void RTSPSyncPush::onAudioDataAvailable(const QByteArray &data)
 void RTSPSyncPush::onEncodedAudioPacket(AVPacket *pkt)
 {
     QMutexLocker locker(&m_mutex);
+    // 时间戳转换：将编码器的time_base转换为流的time_base
+    if (m_audioCodeThread && m_audioCodeThread->codecCtx() && m_audioCodeThread->stream()) {
+        av_packet_rescale_ts(pkt,
+                             m_audioCodeThread->codecCtx()->time_base,
+                             m_audioCodeThread->stream()->time_base);
+    }
     pushPacket(pkt, false);
 }
 
@@ -145,8 +157,8 @@ void RTSPSyncPush::pushPacket(AVPacket *pkt, bool isVideo)
     if (av_interleaved_write_frame(m_fmtCtx, pkt) < 0) {
         emit error("推流包写入失败");
     }
-    QString txt = isVideo?"视频包":"音频包";
-    LogDebug << "写入"<<txt;
+//    QString txt = isVideo?"视频包":"音频包";
+//    LogDebug << "写入"<<txt;
     av_packet_free(&pkt); // 彻底释放，不用 unref
 }
 

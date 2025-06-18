@@ -17,6 +17,7 @@ win32:CONFIG(release, debug|release): DESTDIR += $$PWD/bin/Release
 else:win32:CONFIG(debug, debug|release): DESTDIR += $$PWD/bin/Debug
 
 SOURCES += \
+    LogDemo/Logger.cpp \
     Push/audiocapturethread.cpp \
     Push/audiocodethread.cpp \
     Push/rtspsyncpush.cpp \
@@ -30,6 +31,8 @@ SOURCES += \
 
 HEADERS += \
     DataStruct.h \
+    LogDemo/Logger.h \
+    LogDemo/LoggerTemplate.h \
     Push/audiocapturethread.h \
     Push/audiocodethread.h \
     Push/rtspsyncpush.h \
