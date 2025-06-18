@@ -6,6 +6,7 @@
 
 extern "C" {
 #include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
 }
 
 class VideoCaptureThread : public QThread
@@ -30,7 +31,11 @@ private:
     AVCodecContext* m_codecCtx = nullptr;
     int m_videoStreamIndex = -1;
     volatile bool m_running = false;
-    QMutex m_mutex;
+
+    QString m_sourceUrl;//视频流源地址
+    int m_width = 1920;
+    int m_height = 1080;
+    int m_fps = 30;
 };
 
 #endif // VIDEOCAPTURETHREAD_H

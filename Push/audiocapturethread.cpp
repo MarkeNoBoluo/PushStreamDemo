@@ -29,7 +29,7 @@ bool AudioCaptureThread::initialize(int sampleRate, int channels) {
 }
 
 void AudioCaptureThread::run() {
-    m_audioInput = new QAudioInput(m_audioFormat, this);
+    m_audioInput = new QAudioInput(m_audioFormat);
     AudioInputDevice* device = new AudioInputDevice(this);
     device->open(QIODevice::WriteOnly);
     m_audioInput->start(device);

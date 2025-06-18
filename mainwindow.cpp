@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 #include "rtsppusher.h"
 #include "Logger.h"
+#include "rtspsyncpush.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -10,23 +11,29 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     //推流器初始化
-    m_pusher = std::make_unique<RTSPPusher>(this);
-#ifdef Q_OS_WIN
-    m_pusher->setSource("desktop");
-#else
-    m_pusher->setSource(":0.0");
-#endif
-    m_pusher->setVideoSize(1920,1080);
-    m_pusher->setFrameRate(30);
-    m_pusher->setBitRate(6000);//kbps
-    m_pusher->setObjectName("PushStreamer");//投影推流1600
-    connect(m_pusher.get(), &RTSPPusher::stateChanged,
-            this, &MainWindow::handlePusherStateChanged);
+//    m_pusher = std::make_unique<RTSPPusher>(this);
+//#ifdef Q_OS_WIN
+//    m_pusher->setSource("desktop");
+//#else
+//    m_pusher->setSource(":0.0");
+//#endif
+//    m_pusher->setVideoSize(1920,1080);
+//    m_pusher->setFrameRate(30);
+//    m_pusher->setBitRate(6000);//kbps
+//    m_pusher->setObjectName("PushStreamer");//投影推流1600
+//    connect(m_pusher.get(), &RTSPPusher::stateChanged,
+//            this, &MainWindow::handlePusherStateChanged);
+
+
     ui->btn_Push->setText("开始");
 //    ui->lineEdit->setText("rtsp://192.168.42.116:25544/live");
     ui->lineEdit->setText("rtsp://127.0.0.1:10054/live");
 
-
+    m_rtspPusher = new RTSPSyncPush(this);
+    m_rtspPusher->initialize(
+        "desktop",1920,1080,30,6000,
+        44100,2,"rtsp://127.0.0.1:10054/live"
+        );
 }
 
 MainWindow::~MainWindow()
@@ -51,11 +58,13 @@ void MainWindow::on_btn_Push_clicked()
     }
     if(m_isPush){
         ui->btn_Push->setText("开始");
-        m_pusher->stop();
+        m_rtspPusher->stop();
+//        m_pusher->stop();
     }else{
         ui->btn_Push->setText("停止");
-        m_pusher->setDestination(url);
-        m_pusher->start();
+        m_rtspPusher->start();
+//        m_pusher->setDestination(url);
+//        m_pusher->start();
     }
     m_isPush = !m_isPush;
 }

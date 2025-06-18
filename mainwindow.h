@@ -5,6 +5,7 @@
 #include <memory>
 #include "DataStruct.h"
 class RTSPPusher;
+class RTSPSyncPush;
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -27,5 +28,6 @@ private:
     Ui::MainWindow *ui;
     std::unique_ptr<RTSPPusher> m_pusher;
     bool m_isPush = false;
+    RTSPSyncPush *m_rtspPusher = nullptr;
 };
 #endif // MAINWINDOW_H
