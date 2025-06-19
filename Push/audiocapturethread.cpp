@@ -44,8 +44,9 @@ void AudioCaptureThread::run() {
         m_audioInput = new QAudioInput(monitorDev, m_audioFormat);
         LogDebug << "音频输入设备" <<monitorDev.deviceName();
     }else{
-        LogDebug << "音频初始化失败，没有找到立体声混音设备";
-        return ;
+        monitorDev = QAudioDeviceInfo::defaultInputDevice();
+        m_audioInput = new QAudioInput(monitorDev, m_audioFormat);
+        LogDebug << "音频初始化失败，没有找到立体声混音设备,使用默认输入设备";
     }
     AudioInputDevice* device = new AudioInputDevice(this);
     device->open(QIODevice::WriteOnly);

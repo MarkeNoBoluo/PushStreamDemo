@@ -30,16 +30,13 @@ MainWindow::MainWindow(QWidget *parent)
 //    ui->lineEdit->setText("rtsp://127.0.0.1:10054/live");
     m_pushThread = new QThread;
     m_rtspPusher = new RTSPSyncPush;
-    m_rtspPusher->moveToThread(m_pushThread);
+//    m_rtspPusher->moveToThread(m_pushThread);
     connect(m_rtspPusher,&RTSPSyncPush::error,this,[=](QString msg){
         LogErr << msg;
     });
     connect(m_pushThread, &QThread::started, m_rtspPusher, &RTSPSyncPush::start);
     connect(m_pushThread, &QThread::finished, m_rtspPusher, &QThread::deleteLater);
-    m_rtspPusher->initialize(
-        "desktop",1920,1080,30,4000000,
-        44100,2,"rtsp://192.168.42.116:25544/push1"
-        );
+
 }
 
 MainWindow::~MainWindow()
@@ -64,11 +61,17 @@ void MainWindow::on_btn_Push_clicked()
     }
     if(m_isPush){
         ui->btn_Push->setText("开始");
-        m_pushThread->quit();
+//        m_pushThread->quit();
+        m_rtspPusher->stop();
 //        m_pusher->stop();
     }else{
         ui->btn_Push->setText("停止");
-        m_pushThread->start();
+//        m_pushThread->start();
+        m_rtspPusher->initialize(
+            "desktop",1920,1080,30,4000000,
+            44100,2,url
+            );
+        m_rtspPusher->start();
 //        m_pusher->setDestination(url);
 //        m_pusher->start();
     }

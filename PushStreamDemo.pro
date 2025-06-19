@@ -21,6 +21,7 @@ SOURCES += \
     Push/audiocapturethread.cpp \
     Push/audiocodethread.cpp \
     Push/rtspsyncpush.cpp \
+    Push/streampushthread.cpp \
     Push/videocapturethread.cpp \
     Push/videocodethread.cpp \
     audioprocessor.cpp \
@@ -36,6 +37,7 @@ HEADERS += \
     Push/audiocapturethread.h \
     Push/audiocodethread.h \
     Push/rtspsyncpush.h \
+    Push/streampushthread.h \
     Push/videocapturethread.h \
     Push/videocodethread.h \
     audioprocessor.h \
