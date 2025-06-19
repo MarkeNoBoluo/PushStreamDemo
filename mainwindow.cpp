@@ -26,17 +26,19 @@ MainWindow::MainWindow(QWidget *parent)
 
 
     ui->btn_Push->setText("开始");
-    ui->lineEdit->setText("rtsp://192.168.42.116:25544/live");
+    ui->lineEdit->setText("rtsp://192.168.42.116:25544/push1");
 //    ui->lineEdit->setText("rtsp://127.0.0.1:10054/live");
     m_pushThread = new QThread;
     m_rtspPusher = new RTSPSyncPush;
     m_rtspPusher->moveToThread(m_pushThread);
-
+    connect(m_rtspPusher,&RTSPSyncPush::error,this,[=](QString msg){
+        LogErr << msg;
+    });
     connect(m_pushThread, &QThread::started, m_rtspPusher, &RTSPSyncPush::start);
     connect(m_pushThread, &QThread::finished, m_rtspPusher, &QThread::deleteLater);
     m_rtspPusher->initialize(
-        "desktop",1920,1080,30,6000000,
-        44100,2,"rtsp://192.168.42.116:25544/live"
+        "desktop",1920,1080,30,4000000,
+        44100,2,"rtsp://192.168.42.116:25544/push1"
         );
 }
 

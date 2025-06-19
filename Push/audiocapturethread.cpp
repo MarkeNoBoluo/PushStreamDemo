@@ -19,18 +19,34 @@ bool AudioCaptureThread::initialize(int sampleRate, int channels) {
     m_audioFormat.setByteOrder(QAudioFormat::LittleEndian);
     m_audioFormat.setSampleType(QAudioFormat::SignedInt);
 
-    QAudioDeviceInfo info = QAudioDeviceInfo::defaultInputDevice();
-    if (!info.isFormatSupported(m_audioFormat)) {
-        m_audioFormat = info.nearestFormat(m_audioFormat);
-        LogInfo << "使用最接近的音频格式:" << m_audioFormat.sampleRate() << "Hz,"
-                << m_audioFormat.channelCount() << "channels";
-    }
-    LogDebug << "音频输入设备" <<info.deviceName();
+
+//    QAudioDeviceInfo info = QAudioDeviceInfo::defaultInputDevice();
+//    if (!info.isFormatSupported(m_audioFormat)) {
+//        m_audioFormat = info.nearestFormat(m_audioFormat);
+//        LogInfo << "使用最接近的音频格式:" << m_audioFormat.sampleRate() << "Hz,"
+//                << m_audioFormat.channelCount() << "channels";
+//    }
+
     return true;
 }
 
 void AudioCaptureThread::run() {
-    m_audioInput = new QAudioInput(m_audioFormat);
+
+    QAudioDeviceInfo monitorDev;
+    for (auto &dev : QAudioDeviceInfo::availableDevices(QAudio::AudioInput)) {
+        if (dev.deviceName().contains("立体声混音", Qt::CaseInsensitive)||
+            dev.deviceName().contains("Stereo Mix", Qt::CaseInsensitive)) {
+            monitorDev = dev;
+            break;
+        }
+    }
+    if (!monitorDev.isNull()) {
+        m_audioInput = new QAudioInput(monitorDev, m_audioFormat);
+        LogDebug << "音频输入设备" <<monitorDev.deviceName();
+    }else{
+        LogDebug << "音频初始化失败，没有找到立体声混音设备";
+        return ;
+    }
     AudioInputDevice* device = new AudioInputDevice(this);
     device->open(QIODevice::WriteOnly);
     m_audioInput->start(device);

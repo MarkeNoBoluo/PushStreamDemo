@@ -76,15 +76,18 @@ void RTSPSyncPush::start() {
     m_videoCapThread->start();
     m_videoCodeThread->start();
 
+    int ret = -1;
     // 写文件头
     if (!(m_fmtCtx->oformat->flags & AVFMT_NOFILE)) {
-        if (avio_open(&m_fmtCtx->pb, m_rtspUrl.toUtf8().data(), AVIO_FLAG_WRITE) < 0) {
+        ret = avio_open(&m_fmtCtx->pb, m_rtspUrl.toUtf8().data(), AVIO_FLAG_WRITE);
+        if (ret < 0) {
             emit error("打开RTSP输出失败");
             return;
         }
     }
-    if (avformat_write_header(m_fmtCtx, nullptr) < 0) {
-        emit error("写入文件头失败");
+    ret = avformat_write_header(m_fmtCtx, nullptr);
+    if (ret < 0) {
+        emit error("写入文件头失败:"+QString::number(ret));
         return;
     }
 }
@@ -150,11 +153,12 @@ void RTSPSyncPush::onEncodedAudioPacket(AVPacket *pkt)
 void RTSPSyncPush::pushPacket(AVPacket *pkt, bool isVideo)
 {
     // 简单同步控制可以在这里实现（根据 PTS 控制写入先后/丢帧等策略）
-    if (!pkt || !pkt->data || pkt->size <= 0) {
+    if (!pkt || !pkt->data || pkt->size <= 0 || pkt->pts == 0) {
         av_packet_free(&pkt); // 确保释放
         return;
     }
-    if (av_interleaved_write_frame(m_fmtCtx, pkt) < 0) {
+    int ret = av_interleaved_write_frame(m_fmtCtx, pkt);
+    if (ret< 0) {
         emit error("推流包写入失败");
     }
 //    QString txt = isVideo?"视频包":"音频包";
